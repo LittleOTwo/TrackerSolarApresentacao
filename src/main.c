@@ -15,9 +15,9 @@
 
 // Valores de entrada
 const data_t calibracao = {0, 0, 15, 28, 6, 2025};  // 28/06/2025 15:00:00
-const double latitude_local_graus = -23.55;  // São Paulo (negativo para Sul)
-const double longitude_local_graus = -46.63;  // São Paulo (negativo para Oeste)
-const double longitude_meridiano_padrao_graus = -45.0;  // Para UTC-3 (BRT)
+const float latitude_local_graus = -23.55;  // São Paulo (negativo para Sul)
+const float longitude_local_graus = -46.63;  // São Paulo (negativo para Oeste)
+const float longitude_meridiano_padrao_graus = -45.0;  // Para UTC-3 (BRT)
 struct rtc_time tm;
 
 #include <zephyr/kernel.h>
@@ -30,6 +30,9 @@ struct rtc_time tm;
 #include "rtc_e_sol.h"
 //#define CONFIG_SET_RTC_TIME  // comente o define para não configurar o RTC
 
+#define SERVO_PERIODO_TPM_MODULO 7500
+#define SERVO_GPIO_PORTA GPIOE
+#define SERVO_GPIO_PINO  20
 
 //ADC
 #define ADC_RESOLUTION      12
@@ -38,8 +41,6 @@ struct rtc_time tm;
 #define ADC_ACQUISITION_TIME ADC_ACQ_TIME_DEFAULT
 #define ADC_CHANNEL_ID      0  //Canal do ADC, veja a pinagem e nomes em \.platformio\packages\framework-zephyr\_pio\modules\hal\nxp\dts\nxp\kinetis\MKL25Z128VLK4-pinctrl.h
 #define ADC_VREF_MV         3300
-
-static int16_t sample_buffer;
 
 //GPIO
 #define LED_NODE DT_ALIAS(led1)
@@ -66,11 +67,23 @@ uint16_t duty  = 950;
 
 const struct device *rtc = DEVICE_DT_GET(DS1307_NODE);
 
+void definir_servo_angulo(float angulo){
+    uint16_t valor_cnv = 0;
+    uint16_t cnv_min = 0.02f * SERVO_PERIODO_TPM_MODULO;
+    uint16_t cnv_max = 0.12f * SERVO_PERIODO_TPM_MODULO;
+
+    if (angulo < 0.0f) angulo = 0.0f;
+    if (angulo > 180.0f) angulo = 180.0f;
+
+    valor_cnv = (uint16_t)(cnv_min + (angulo / 180.0f)*(cnv_max - cnv_min));
+
+    pwm_tpm_CnV(TPM1, 0, valor_cnv);
+}
+
 int main(void){
     // 1.
-    pwm_tpm_Init(TPM2, TPM_PLLFLL, TPM_MODULE, TPM_CLK, PS_128, EDGE_PWM);
-    pwm_tpm_Ch_Init(TPM2, 1, TPM_PWM_H, GPIOB, 19);
-    pwm_tpm_CnV(TPM2, 1, duty);
+    pwm_tpm_Init(TPM1, TPM_PLLFLL, TPM_MODULE, TPM_CLK, PS_128, EDGE_PWM);
+    pwm_tpm_Ch_Init(TPM1, 0, TPM_PWM_H, GPIOE, 20);
     printk("Sistema do tracker solar inicializado.\n");
 
     while(1){
@@ -84,38 +97,37 @@ int main(void){
         }
 
         // 3.
-        double omega_atual_graus = angulo_horario_solar();
-        double zenital_atual_graus = angulo_zenital();
-        if(omega_atual_graus < -900.0 || zenital_atual_graus < -900.0){
+        float omega_atual_graus = angulo_horario_solar();
+        float zenital_atual_graus = angulo_zenital();
+        if(omega_atual_graus < -900.0f || zenital_atual_graus < -900.0f){
             printk("Erro ao calcular o ângulo omega e zenital.\n");
             k_msleep(60000);
             continue;
         }
-        printk("Calculado: Omega = %.2f graus, Zenital = %.2f graus.\n", omega_atual_graus, zenital_atual_graus);
+        printk("Calculado: Omega = %d graus, Zenital = %d graus.\n", (int)(omega_atual_graus*100), (int)(zenital_atual_graus*100));
 
         // 4.
-        double angulo_servo_alvo = 90.0;
-        if(zenital_atual_graus < 90.0){
-            angulo_servo_alvo = omega_atual_graus + 90.0;
-            if(angulo_servo_alvo < 0.0) angulo_servo_alvo = 0;
-            if(angulo_servo_alvo > 180.0) angulo_servo_alvo = 180.0;
+        float angulo_servo_alvo = 90.0f;
+        if(zenital_atual_graus < 90.0f){
+            angulo_servo_alvo = omega_atual_graus + 90.0f;
+            if(angulo_servo_alvo < 0.0f) angulo_servo_alvo = 0;
+            if(angulo_servo_alvo > 180.0f) angulo_servo_alvo = 180.0f;
 
-            //servo_definir_angulo(angulo_servo_alvo);
-            printk("Servo: %.1f graus (Sol acima do horizonte)\n", angulo_servo_alvo);
+            definir_servo_angulo(angulo_servo_alvo);
+            printk("Servo: %d graus (Sol acima do horizonte)\n", (int)angulo_servo_alvo);
 
             // 5.
-            k_msleep(5*60*1000);
+            k_msleep(1000);
         }
         else{
-            angulo_servo_alvo = 0.0;
-            //servo_definir_angulo(angulo_servo_alvo);
-            printk("Servo: %.1f graus (Sol abaixo do horizonte, posicao de espera)\n", angulo_servo_alvo);
+            angulo_servo_alvo = 0.0f;
+            definir_servo_angulo(angulo_servo_alvo);
+            printk("Servo: 0.0 graus (Sol abaixo do horizonte, posicao de espera)\n", angulo_servo_alvo);
 
             // 6.
             while(1){
                 printk("Modo noturno. Aguardando 30 minutos para nova verificação.\n");
-                k_msleep(300);
-                printk("Cheguei aqui.");
+                k_msleep(5000);
 
                 if (rtc_get_time(rtc, &tm) == 0) {
                     printk("Verificação noturna RTC: %02d/%02d %02d:%02d\n", tm.tm_mday, tm.tm_mon + 1, tm.tm_hour, tm.tm_min);
@@ -124,11 +136,10 @@ int main(void){
                 }
 
                 if(tm.tm_hour>=4 && tm.tm_hour<=8){
-                    double omega_check = angulo_horario_solar();
-                    double zenital_check = angulo_zenital();
-                    printk("Check matinal: Omega=%.2f, Zenital=%.2f\n", omega_check, zenital_check);
+                    float zenital_check = angulo_zenital();
+                    printk("Check matinal. Sol ainda abaixo do horizonte.");
 
-                    if(zenital_check < 90.0 && zenital_check >= 0.0){
+                    if(zenital_check < 90.0f && zenital_check >= 0.0f){
                         printk("Sol detectado. Retornando operações.\n");
                         break;
                     }

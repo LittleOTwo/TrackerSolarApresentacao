@@ -14,11 +14,11 @@ typedef struct{
 
 extern struct rtc_time tm;
 extern const data_t calibracao;
-extern const double latitude_local_graus; // São Paulo (negativo para Sul)
-extern const double longitude_local_graus; // São Paulo (negativo para Oeste)
-extern const double longitude_meridiano_padrao_graus; // Para UTC-3 (BRT)
+extern const float latitude_local_graus; // São Paulo (negativo para Sul)
+extern const float longitude_local_graus; // São Paulo (negativo para Oeste)
+extern const float longitude_meridiano_padrao_graus; // Para UTC-3 (BRT)
 
-double angulo_horario_solar(void);
-double angulo_zenital(void);
+float angulo_horario_solar(void);
+float angulo_zenital(void);
 
 #endif /* RTC_H_ */

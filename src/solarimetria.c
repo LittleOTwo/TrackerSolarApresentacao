@@ -4,7 +4,7 @@
 #include <zephyr/drivers/rtc.h>
 
 #ifndef M_PI
-#define M_PI 3.14159265358979323846
+#define M_PI 3.1415926535f
 #endif
 
 int cor[12]={0,1,-1,0,0,1,1,2,3,3,4,4};
@@ -20,49 +20,49 @@ int calcular_n(int dia, int mes, int ano){
     return dia + (mes - 1) * 30 + cor[mes - 1] + eh_bissexto(ano);
 }
 
-double para_radianos(double graus){
-    return graus * (M_PI / 180.0);
+float para_radianos(float graus){
+    return graus * (M_PI / 180.0f);
 }
 
-double para_graus(double radianos){
-    return radianos * (180.0 / M_PI);
+float para_graus(float radianos){
+    return radianos * (180.0f / M_PI);
 }
 
-double angulo_horario_solar(){
+float angulo_horario_solar(){
     int n = calcular_n(tm.tm_mday, tm.tm_mon + 1, tm.tm_year + 1900);
 
-    double B_rad = (2.0 * M_PI * (n - 81.0)) / 364.0;  // B em radianos
+    float B_rad = (2.0f * M_PI * (n - 81.0f)) / 364.0f;  // B em radianos
 
-    double EoT_minutos = 9.87 * sin(2.0 * B_rad) - 7.53 * cos(B_rad) - 1.5 * sin(B_rad);  
+    float EoT_minutos = 9.87f * sinf(2.0f * B_rad) - 7.53f * cosf(B_rad) - 1.5f * sinf(B_rad);  
 
-    double hcl_decimal = tm.tm_hour + (tm.tm_min / 60.0) + (tm.tm_sec / 3600.0);
+    float hcl_decimal = tm.tm_hour + (tm.tm_min / 60.0f) + (tm.tm_sec / 3600.0f);
 
-    double delta_t_longitude_minutos = 4.0 * (longitude_meridiano_padrao_graus - longitude_local_graus);
+    float delta_t_longitude_minutos = 4.0f * (longitude_meridiano_padrao_graus - longitude_local_graus);
 
-    double tsl_horas = hcl_decimal + (EoT_minutos + delta_t_longitude_minutos) / 60.0;
+    float tsl_horas = hcl_decimal + (EoT_minutos + delta_t_longitude_minutos) / 60.0f;
 
-    double omega_ahs_graus = 15.0 * (tsl_horas - 12.0);  // Ângulo horário solar
+    float omega_ahs_graus = 15.0f * (tsl_horas - 12.0f);  // Ângulo horário solar
     return omega_ahs_graus;
 }
 
-double angulo_zenital(){
+float angulo_zenital(){
     int n = calcular_n(tm.tm_mday, tm.tm_mon + 1, tm.tm_year + 1900);
-    double omega_ahs_graus = angulo_horario_solar();
-    double argumento_declinacao_graus = (360.0 / 365.0) * (284.0 + n);
-    double argumento_declinacao_rad = para_radianos(argumento_declinacao_graus);
-    double delta_ds_graus = 23.45 * sin(argumento_declinacao_rad);  // Declinação solar
+    float omega_ahs_graus = angulo_horario_solar();
+    float argumento_declinacao_graus = (360.0f / 365.0f) * (284.0f + n);
+    float argumento_declinacao_rad = para_radianos(argumento_declinacao_graus);
+    float delta_ds_graus = 23.45f * sinf(argumento_declinacao_rad);  // Declinação solar
 
-    double latitude_rad = para_radianos(latitude_local_graus);
-    double delta_ds_rad = para_radianos(delta_ds_graus);
-    double omega_ah_rad = para_radianos(omega_ahs_graus);
+    float latitude_rad = para_radianos(latitude_local_graus);
+    float delta_ds_rad = para_radianos(delta_ds_graus);
+    float omega_ah_rad = para_radianos(omega_ahs_graus);
 
-    double cos_theta_z = sin(latitude_rad) * sin(delta_ds_rad) + cos(latitude_rad) * cos(delta_ds_rad) * cos(omega_ah_rad);
+    float cos_theta_z = sinf(latitude_rad) * sinf(delta_ds_rad) + cosf(latitude_rad) * cosf(delta_ds_rad) * cosf(omega_ah_rad);
 
     // Garantir que o argumento de acos está no intervalo [-1.0, 1.0]
-    if (cos_theta_z > 1.0) cos_theta_z = 1.0;
-    if (cos_theta_z < -1.0) cos_theta_z = -1.0;
+    if (cos_theta_z > 1.0f) cos_theta_z = 1.0f;
+    if (cos_theta_z < -1.0f) cos_theta_z = -1.0f;
 
-    double angulo_zenital_rad = acos(cos_theta_z);
-    double angulo_zenital_graus = para_graus(angulo_zenital_rad);
+    float angulo_zenital_rad = acosf(cos_theta_z);
+    float angulo_zenital_graus = para_graus(angulo_zenital_rad);
     return angulo_zenital_graus;
 }
