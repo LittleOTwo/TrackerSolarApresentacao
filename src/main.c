@@ -30,6 +30,7 @@ struct rtc_time tm;
 #include "rtc_e_sol.h"
 //#define CONFIG_SET_RTC_TIME  // comente o define para não configurar o RTC
 
+//PWM
 #define SERVO_PERIODO_TPM_MODULO 7500
 #define SERVO_GPIO_PORTA GPIOE
 #define SERVO_GPIO_PINO  20
@@ -51,10 +52,6 @@ struct rtc_time tm;
 
 static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(LED_NODE, gpios);
 
-
-//PWM
-#define TPM_MODULE 1000         // Define a frequência do PWM fpwm = (TPM_CLK / (TPM_MODULE * PS))
-uint16_t duty  = 950;  
 
 //RTC
 
