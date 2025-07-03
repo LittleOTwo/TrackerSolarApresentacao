@@ -86,8 +86,19 @@ int main(void){
     pwm_tpm_Ch_Init(TPM1, 0, TPM_PWM_H, GPIOE, 20);
     printk("Sistema do tracker solar inicializado.\n");
 
+    uint16_t tick = 150;
+    pwm_tpm_CnV(TPM1,0,tick);
+    k_msleep(5000);
+    for(tick = 150; tick < 954; tick += 6){
+        pwm_tpm_CnV(TPM1,0,tick);
+        k_msleep(20);
+    }
+    for(tick = 954; tick > 150; tick -= 6){
+        pwm_tpm_CnV(TPM1,0,tick);
+        k_msleep(20);
+    }
+
     while(1){
-        // 2.
         if (rtc_get_time(rtc, &tm) == 0) {
             printk("Hora: %04d-%02d-%02d %02d:%02d:%02d\n",
                    tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
@@ -115,37 +126,9 @@ int main(void){
 
             definir_servo_angulo(angulo_servo_alvo);
             printk("Servo: %d graus (Sol acima do horizonte)\n", (int)angulo_servo_alvo);
-
-            // 5.
             k_msleep(1000);
-        }
-        else{
-            angulo_servo_alvo = 0.0f;
-            definir_servo_angulo(angulo_servo_alvo);
-            printk("Servo: 0.0 graus (Sol abaixo do horizonte, posicao de espera)\n", angulo_servo_alvo);
-
-            // 6.
-            while(1){
-                printk("Modo noturno. Aguardando 30 minutos para nova verificação.\n");
-                k_msleep(5000);
-
-                if (rtc_get_time(rtc, &tm) == 0) {
-                    printk("Verificação noturna RTC: %02d/%02d %02d:%02d\n", tm.tm_mday, tm.tm_mon + 1, tm.tm_hour, tm.tm_min);
-                } else {
-                    printk("Erro ao ler a hora do RTC\n");
-                }
-
-                if(tm.tm_hour>=4 && tm.tm_hour<=8){
-                    float zenital_check = angulo_zenital();
-                    printk("Check matinal. Sol ainda abaixo do horizonte.");
-
-                    if(zenital_check < 90.0f && zenital_check >= 0.0f){
-                        printk("Sol detectado. Retornando operações.\n");
-                        break;
-                    }
-                }
-            }
         }
     }
     return 0;
 }
+
