@@ -76,7 +76,7 @@ void definir_servo_angulo(float angulo){
     if (angulo > 180.0f) angulo = 180.0f;
 
     valor_cnv = (uint16_t)(cnv_min + (angulo / 180.0f)*(cnv_max - cnv_min));
-
+    
     pwm_tpm_CnV(TPM1, 0, valor_cnv);
 }
 
