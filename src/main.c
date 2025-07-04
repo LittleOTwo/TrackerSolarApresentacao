@@ -64,7 +64,7 @@ static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(LED_NODE, gpios);
 
 const struct device *rtc = DEVICE_DT_GET(DS1307_NODE);
 
-voiddefinir_servo_angulo(float angulo){
+void definir_servo_angulo(float angulo){
     uint16_t valor_cnv = 0;
     uint16_t cnv_min = 135;
     uint16_t cnv_max = 890;
